@@ -20,12 +20,12 @@ func (x *JCGExtender) Visit(ctx *gocrawl.URLContext, res *http.Response, doc *go
 	x.replaceOnClickURL(doc)
 	matchInfo := x.getMatchInfo(doc)
 	if matchInfo != nil {
-		byte, err := json.Marshal(matchInfo)
+		file, err := os.OpenFile("./data/out", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
+		defer file.Close()
 		if err != nil {
 			panic(err)
 		}
-		file, err := os.OpenFile("./data/out", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
-		defer file.Close()
+		byte, err := json.Marshal(matchInfo)
 		if err != nil {
 			panic(err)
 		}
