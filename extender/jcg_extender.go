@@ -10,7 +10,9 @@ import (
 	"strings"
 )
 
-var tourOk = regexp.MustCompile(`^http://sv\.j\-cg\.com/compe/view/tour/(\d)+$`)
+var rootOk = regexp.MustCompile(`^http://sv\.j\-cg\.com/compe/rotation$`)
+var compeOk = regexp.MustCompile(`^http://sv\.j\-cg\.com/compe/(\d+)$`)
+var tourOk = regexp.MustCompile(`^http://sv\.j\-cg\.com/compe/view/tour/(\d+)$`)
 var matchOk = regexp.MustCompile(`^http://sv\.j\-cg\.com/compe/view/match/(\d+)/(\d+)$`)
 
 type JCGExtender struct {
@@ -77,6 +79,8 @@ func (x *JCGExtender) getMatchInfo(doc *goquery.Document) *MatchInfo {
 
 // Override Filter for our need.
 func (x *JCGExtender) Filter(ctx *gocrawl.URLContext, isVisited bool) bool {
-	return !isVisited && (tourOk.MatchString(ctx.NormalizedURL().String()) ||
-			matchOk.MatchString(ctx.NormalizedURL().String()))
+	return !isVisited && (rootOk.MatchString(ctx.NormalizedURL().String()) ||
+		compeOk.MatchString(ctx.NormalizedURL().String()) ||
+		tourOk.MatchString(ctx.NormalizedURL().String()) ||
+		matchOk.MatchString(ctx.NormalizedURL().String()))
 }

@@ -19,5 +19,5 @@ func main() {
 	opts.MaxVisits = 1000
 
 	c := gocrawl.NewCrawlerWithOptions(opts)
-	c.Run("https://sv.j-cg.com/compe/view/tour/1244")
+	c.Run("https://sv.j-cg.com/compe/rotation")
 }
