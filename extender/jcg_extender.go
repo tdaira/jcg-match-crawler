@@ -10,7 +10,8 @@ import (
 	"strings"
 )
 
-var rxOk = regexp.MustCompile(`^((http://sv\.j\-cg\.com/compe/view/tour/1244)|(http://sv\.j\-cg\.com/compe/view/match/\d+/\d+))$`)
+var tourOk = regexp.MustCompile(`^http://sv\.j\-cg\.com/compe/view/tour/(\d)+$`)
+var matchOk = regexp.MustCompile(`^http://sv\.j\-cg\.com/compe/view/match/(\d+)/(\d+)$`)
 
 type JCGExtender struct {
 	gocrawl.DefaultExtender // Will use the default implementation of all but Visit and Filter
@@ -19,8 +20,10 @@ type JCGExtender struct {
 func (x *JCGExtender) Visit(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
 	x.replaceOnClickURL(doc)
 	matchInfo := x.getMatchInfo(doc)
-	if matchInfo != nil {
-		file, err := os.OpenFile("./data/out", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
+	if matchInfo != nil && matchOk.MatchString(ctx.NormalizedURL().String()) {
+		subMatch := matchOk.FindSubmatch([]byte(ctx.NormalizedURL().String()))
+		matchNum := string(subMatch[1])
+		file, err := os.OpenFile("./data/" + matchNum, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
 		defer file.Close()
 		if err != nil {
 			panic(err)
@@ -74,5 +77,6 @@ func (x *JCGExtender) getMatchInfo(doc *goquery.Document) *MatchInfo {
 
 // Override Filter for our need.
 func (x *JCGExtender) Filter(ctx *gocrawl.URLContext, isVisited bool) bool {
-	return !isVisited && rxOk.MatchString(ctx.NormalizedURL().String())
+	return !isVisited && (tourOk.MatchString(ctx.NormalizedURL().String()) ||
+			matchOk.MatchString(ctx.NormalizedURL().String()))
 }
