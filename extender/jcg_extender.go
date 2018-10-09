@@ -1,10 +1,11 @@
 package extender
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/tdaira/gocrawl"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -19,7 +20,16 @@ func (x *JCGExtender) Visit(ctx *gocrawl.URLContext, res *http.Response, doc *go
 	x.replaceOnClickURL(doc)
 	matchInfo := x.getMatchInfo(doc)
 	if matchInfo != nil {
-		fmt.Println(matchInfo)
+		byte, err := json.Marshal(matchInfo)
+		if err != nil {
+			panic(err)
+		}
+		file, err := os.OpenFile("./data/out", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
+		defer file.Close()
+		if err != nil {
+			panic(err)
+		}
+		file.Write(append(byte, "\n"...))
 	}
 
 	// Return nil and true - let gocrawl find the links
@@ -33,7 +43,6 @@ func (x *JCGExtender) replaceOnClickURL(doc *goquery.Document) {
 		onClickStr := s.AttrOr("onclick", "")
 		onClickURL := strings.Replace(onClickStr, "location.href=", "", -1)
 		onClickURL = strings.Replace(onClickURL, "'", "\"", -1)
-		fmt.Println("url: " + onClickURL)
 		s.ReplaceWithHtml("<a href=" + onClickURL + "><\a>")
 	})
 }
