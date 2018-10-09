@@ -1,13 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/tdaira/gocrawl"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
-	"fmt"
 )
 
 var rxOk = regexp.MustCompile(`^((http://sv\.j\-cg\.com/compe/view/tour/1244)|(http://sv\.j\-cg\.com/compe/view/match/\d+/\d+))$`)
@@ -17,7 +17,18 @@ type JCGExtender struct {
 }
 
 func (x *JCGExtender) Visit(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
-	// Repalace onclick reference with href.
+	x.replaceOnClickURL(doc)
+	matchInfo := x.getMatchInfo(doc)
+	if matchInfo != nil {
+		fmt.Println(matchInfo)
+	}
+
+	// Return nil and true - let gocrawl find the links
+	return nil, true
+}
+
+// Repalace onclick reference with href.
+func (x *JCGExtender) replaceOnClickURL(doc *goquery.Document) {
 	s := doc.Find("li.match[onclick*=location\\.href]")
 	s.Each(func(i int, s *goquery.Selection) {
 		onClickStr := s.AttrOr("onclick", "")
@@ -26,9 +37,47 @@ func (x *JCGExtender) Visit(ctx *gocrawl.URLContext, res *http.Response, doc *go
 		fmt.Println("url: " + onClickURL)
 		s.ReplaceWithHtml("<a href=" + onClickURL + "><\a>")
 	})
+}
 
-	// Return nil and true - let gocrawl find the links
-	return nil, true
+type Deck struct {
+	Name     string
+	URL      string
+	DeckType string
+}
+
+type Win struct {
+	Name     string
+	DeckType string
+}
+
+type MatchInfo struct {
+	DeckList []Deck
+	WinList  []Win
+}
+
+func (x *JCGExtender) getMatchInfo(doc *goquery.Document) *MatchInfo {
+	matchInfo := &MatchInfo{}
+	s := doc.Find("div.team div.name")
+	if s.Size() == 0 {
+		return nil
+	}
+	s.Each(func(i int, s *goquery.Selection) {
+		name := s.Find("p.name_abbr a").Text()
+		s.Find("a[target=\"_svp\"]").Each(func(i int, s *goquery.Selection) {
+			url := s.AttrOr("href", "")
+			icon := s.Find("img").AttrOr("src", "")
+			deck := Deck{Name: name, URL: url, DeckType: icon}
+			matchInfo.DeckList = append(matchInfo.DeckList, deck)
+		})
+	})
+	s = doc.Find("div.game ul.game_list li.clearfix")
+	s.Each(func(i int, s *goquery.Selection) {
+		name := s.Find("span:nth-child(3)").Text()
+		deckType := s.Find("span:nth-child(4)").Text()
+		win := Win{Name: name, DeckType: deckType}
+		matchInfo.WinList = append(matchInfo.WinList, win)
+	})
+	return matchInfo
 }
 
 // Override Filter for our need.
